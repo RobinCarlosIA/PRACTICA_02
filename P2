@@ -1,0 +1,81 @@
+# chat_klg_publicidad.py
+# Escribe 'salir' para terminar.
+
+import json
+import os
+import re
+
+KB_FILE = "kb_klg_publicidad.json" 
+
+# 3 líneas precargadas (marca: KLG PUBLICIDAD)
+DEFAULT_KB = [
+    {"q": "hola", "a": "¡Hola! Bienvenid@ a KLG PUBLICIDAD ✨"},
+    {"q": "como estas?", "a": "¡Muy bien! ¿Y tú? ¿Buscas campañas, branding o anuncios?"},
+    {"q": "de que te gustaría hablar?", "a": "Podemos hablar de redes sociales, pauta, branding o ideas creativas."}
+]
+
+def normalize(s: str) -> str:
+    """Normaliza: minúsculas, quita acentos básicos, limpia espacios/símbolos."""
+    s = s.lower()
+    s = (s.replace("á", "a").replace("é", "e").replace("í", "i")
+           .replace("ó", "o").replace("ú", "u").replace("ü", "u"))
+    s = re.sub(r"[^a-z0-9¿?¡!ñ\s]", " ", s)  # deja letras, números, espacios y signos ?!¿¡
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
+
+def load_kb():
+    """Carga la KB si existe; si no, crea la inicial."""
+    if not os.path.exists(KB_FILE):
+        save_kb(DEFAULT_KB)
+        return list(DEFAULT_KB)
+    try:
+        with open(KB_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+    except Exception:
+        pass
+    return list(DEFAULT_KB)
+
+def save_kb(kb):
+    """Guarda la KB en disco."""
+    with open(KB_FILE, "w", encoding="utf-8") as f:
+        json.dump(kb, f, ensure_ascii=False, indent=2)
+
+def buscar_respuesta(user_text: str, kb: list[dict]) -> str | None:
+    """Coincidencia EXACTA tras normalizar (simple y claro para la práctica)."""
+    n = normalize(user_text)
+    for r in kb:
+        if normalize(r["q"]) == n:
+            return r["a"]
+    return None
+
+def main():
+    kb = load_kb()
+    print("KLG PUBLICIDAD — Chat simple con aprendizaje (escribe 'salir' para terminar).")
+    print("Frases precargadas: 'hola' | 'como estas?' | 'de que te gustaría hablar?'")
+
+    while True:
+        user = input("\nTú: ").strip()
+        if not user:
+            continue
+        if user.lower() == "salir":
+            print("KLG: ¡Hasta luego! 👋")
+            break
+
+        ans = buscar_respuesta(user, kb)
+        if ans:
+            print(f"KLG: {ans}")
+        else:
+            # Adquisición de conocimiento “en voz de agencia”
+            print(f'KLG: Aún no tengo respuesta para: "{user}".')
+            nueva = input("KLG: ¿Qué deberíamos responder cuando nos pregunten eso? (deja vacío para omitir): ").strip()
+            if nueva:
+                kb.append({"q": normalize(user), "a": nueva})
+                save_kb(kb)
+                print("KLG: ¡Perfecto! Lo guardé para la próxima.")
+            else:
+                print("KLG: Sin problema, no aprenderé esta vez.")
+
+if __name__ == "__main__":
+    main()
